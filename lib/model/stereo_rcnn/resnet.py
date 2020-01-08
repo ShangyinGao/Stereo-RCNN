@@ -226,12 +226,13 @@ class resnet(_StereoRCNN):
     _StereoRCNN.__init__(self, classes)
     
   def _init_modules(self):
-    resnet = resnet101()
+    # resnet = resnet101()
+    resnet = resnet34(pretrained=self.pretrained)
 
-    if self.pretrained == True:
-      print("Loading pretrained weights from %s" %(self.model_path))
-      state_dict = torch.load(self.model_path)
-      resnet.load_state_dict({k:v for k,v in state_dict.items() if k in resnet.state_dict()})
+    # if self.pretrained == True:
+    #   print("Loading pretrained weights from %s" %(self.model_path))
+    #   state_dict = torch.load(self.model_path)
+    #   resnet.load_state_dict({k:v for k,v in state_dict.items() if k in resnet.state_dict()})
       
     self.RCNN_layer0 = nn.Sequential(resnet.conv1, resnet.bn1, resnet.relu, resnet.maxpool)
     self.RCNN_layer1 = nn.Sequential(resnet.layer1)
