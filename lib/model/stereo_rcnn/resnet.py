@@ -226,8 +226,8 @@ class resnet(_StereoRCNN):
     _StereoRCNN.__init__(self, classes)
     
   def _init_modules(self):
-    # resnet = resnet101()
-    resnet = resnet34(pretrained=self.pretrained)
+    resnet = resnet101(pretrained=self.pretrained)
+    # resnet = resnet34(pretrained=self.pretrained)
 
     # if self.pretrained == True:
     #   print("Loading pretrained weights from %s" %(self.model_path))
