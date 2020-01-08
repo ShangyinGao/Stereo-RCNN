@@ -262,28 +262,28 @@ class resnet(_StereoRCNN):
       nn.Dropout(p=0.2)
       )
 
-    self.RCNN_kpts = nn.Sequential(
-      nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
-      nn.ReLU(True),
-      nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
-      nn.ReLU(True),
-      nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
-      nn.ReLU(True),
-      nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
-      nn.ReLU(True),
-      nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
-      nn.ReLU(True),
-      nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
-      nn.ReLU(True),
-      nn.ConvTranspose2d(256, 256, kernel_size=2, stride=2),
-      nn.ReLU(True)
-      )
+    # self.RCNN_kpts = nn.Sequential(
+    #   nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
+    #   nn.ReLU(True),
+    #   nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
+    #   nn.ReLU(True),
+    #   nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
+    #   nn.ReLU(True),
+    #   nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
+    #   nn.ReLU(True),
+    #   nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
+    #   nn.ReLU(True),
+    #   nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
+    #   nn.ReLU(True),
+    #   nn.ConvTranspose2d(256, 256, kernel_size=2, stride=2),
+    #   nn.ReLU(True)
+    #   )
 
     self.RCNN_cls_score = nn.Linear(2048, self.n_classes)
 
     self.RCNN_bbox_pred = nn.Linear(2048, 6*self.n_classes)
     self.RCNN_dim_orien_pred = nn.Linear(2048, 5*self.n_classes)
-    self.kpts_class = nn.Conv2d(256, 6, kernel_size=1, stride=1, padding=0)
+    # self.kpts_class = nn.Conv2d(256, 6, kernel_size=1, stride=1, padding=0)
 
     # Fix blocks
     for p in self.RCNN_layer0[0].parameters(): p.requires_grad=False
@@ -328,8 +328,8 @@ class resnet(_StereoRCNN):
       self.RCNN_latlayer3.train()
 
       self.RCNN_toplayer.train()
-      self.RCNN_kpts.train()
-      self.kpts_class.train()
+      # self.RCNN_kpts.train()
+      # self.kpts_class.train()
 
       def set_bn_eval(m):
         classname = m.__class__.__name__
