@@ -165,7 +165,8 @@ if __name__ == '__main__':
         params += [{'params':[value],'lr':lr, 'weight_decay': cfg.TRAIN.WEIGHT_DECAY}]
   params += [{'params':[uncert], 'lr':lr}]
 
-  optimizer = torch.optim.SGD(params, momentum=cfg.TRAIN.MOMENTUM)
+  # optimizer = torch.optim.SGD(params, momentum=cfg.TRAIN.MOMENTUM)
+  optimizer = torch.optim.Adam(params)
 
   if args.resume:
     load_name = os.path.join(output_dir,
