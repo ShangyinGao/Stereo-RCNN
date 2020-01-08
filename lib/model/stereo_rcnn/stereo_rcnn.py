@@ -34,7 +34,7 @@ class _StereoRCNN(nn.Module):
         self.RCNN_loss_dis = 0
         self.RCNN_loss_dim = 0
         self.RCNN_loss_dim_orien = 0
-        self.RCNN_loss_kpts = 0
+        # self.RCNN_loss_kpts = 0
 
         self.maxpool2d = nn.MaxPool2d(1, stride=2)
         # define rpn
@@ -42,7 +42,7 @@ class _StereoRCNN(nn.Module):
         self.RCNN_proposal_target = _ProposalTargetLayer(self.n_classes)
 
         self.RCNN_roi_align = ROIAlign((cfg.POOLING_SIZE, cfg.POOLING_SIZE), 1.0/16.0, 0)
-        self.RCNN_roi_kpts_align = ROIAlign((cfg.POOLING_SIZE*2, cfg.POOLING_SIZE*2), 1.0/16.0, 0)
+        # self.RCNN_roi_kpts_align = ROIAlign((cfg.POOLING_SIZE*2, cfg.POOLING_SIZE*2), 1.0/16.0, 0)
         
     def _init_weights(self):
         def normal_init(m, mean, stddev, truncated=False):
@@ -80,9 +80,9 @@ class _StereoRCNN(nn.Module):
         normal_init(self.RCNN_cls_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
         normal_init(self.RCNN_bbox_pred, 0, 0.001, cfg.TRAIN.TRUNCATED)
         normal_init(self.RCNN_dim_orien_pred, 0, 0.001, cfg.TRAIN.TRUNCATED)
-        normal_init(self.kpts_class, 0, 0.1, cfg.TRAIN.TRUNCATED)
+        # normal_init(self.kpts_class, 0, 0.1, cfg.TRAIN.TRUNCATED)
         weights_init(self.RCNN_top, 0, 0.01, cfg.TRAIN.TRUNCATED)
-        weights_init(self.RCNN_kpts, 0, 0.1, cfg.TRAIN.TRUNCATED)
+        # weights_init(self.RCNN_kpts, 0, 0.1, cfg.TRAIN.TRUNCATED)
 
     def create_architecture(self):
         self._init_modules()
@@ -129,6 +129,7 @@ class _StereoRCNN(nn.Module):
             box_to_levels.append(idx_l)
             scale = feat_maps[i].size(2) / im_info[0][0]
             if kpts is True:
+                raise NotImplementedError ("PyramidRoI_Feat: kpts should be false")
                 feat = self.RCNN_roi_kpts_align(feat_maps[i], rois[idx_l], scale)
             else:
                 feat = self.RCNN_roi_align(feat_maps[i], rois[idx_l], scale)
@@ -141,7 +142,9 @@ class _StereoRCNN(nn.Module):
         return roi_pool_feat
 
     def forward(self, im_left_data, im_right_data, im_info, gt_boxes_left, gt_boxes_right,\
-                gt_boxes_merge, gt_dim_orien, gt_kpts, num_boxes):
+                gt_boxes_merge, gt_dim_orien, num_boxes):
+    # def forward(self, im_left_data, im_right_data, im_info, gt_boxes_left, gt_boxes_right,\
+    #             gt_boxes_merge, gt_dim_orien, gt_kpts, num_boxes):
         batch_size = im_left_data.size(0)
 
         im_info = im_info.data
@@ -149,7 +152,7 @@ class _StereoRCNN(nn.Module):
         gt_boxes_right = gt_boxes_right.data
         gt_boxes_merge = gt_boxes_merge.data
         gt_dim_orien = gt_dim_orien.data
-        gt_kpts = gt_kpts.data
+        # gt_kpts = gt_kpts.data
         num_boxes = num_boxes.data
 
         # feed left image data to base model to obtain base feature map
@@ -199,9 +202,13 @@ class _StereoRCNN(nn.Module):
         # if it is training phrase, then use ground trubut bboxes for refining
         if self.training:
             roi_data = self.RCNN_proposal_target(rois_left, rois_right, gt_boxes_left, gt_boxes_right, \
-                                                gt_dim_orien, gt_kpts, num_boxes)
+                                                gt_dim_orien, num_boxes)
+            # roi_data = self.RCNN_proposal_target(rois_left, rois_right, gt_boxes_left, gt_boxes_right, \
+            #                                     gt_dim_orien, gt_kpts, num_boxes)
             rois_left, rois_right, rois_label, rois_target_left, rois_target_right,\
-            rois_target_dim_orien, kpts_label_all, kpts_weight_all, rois_inside_ws4, rois_outside_ws4 = roi_data
+            rois_target_dim_orien, rois_inside_ws4, rois_outside_ws4 = roi_data
+            # rois_left, rois_right, rois_label, rois_target_left, rois_target_right,\
+            # rois_target_dim_orien, kpts_label_all, kpts_weight_all, rois_inside_ws4, rois_outside_ws4 = roi_data
 
             rois_target_left_right = rois_target_left.new(rois_target_left.size()[0],rois_target_left.size()[1],6)
             rois_target_left_right[:,:,:4] = rois_target_left
@@ -218,13 +225,13 @@ class _StereoRCNN(nn.Module):
 
             rois_label = rois_label.view(-1).long()
             rois_label = Variable(rois_label)
-            kpts_label = Variable(kpts_label_all[:,:,0].contiguous().view(-1))
-            left_border_label = Variable(kpts_label_all[:,:,1].contiguous().view(-1))
-            right_border_label = Variable(kpts_label_all[:,:,2].contiguous().view(-1))
+            # kpts_label = Variable(kpts_label_all[:,:,0].contiguous().view(-1))
+            # left_border_label = Variable(kpts_label_all[:,:,1].contiguous().view(-1))
+            # right_border_label = Variable(kpts_label_all[:,:,2].contiguous().view(-1))
 
-            kpts_weight = Variable(kpts_weight_all[:,:,0].contiguous().view(-1))
-            left_border_weight = Variable(kpts_weight_all[:,:,1].contiguous().view(-1))
-            right_border_weight = Variable(kpts_weight_all[:,:,2].contiguous().view(-1))
+            # kpts_weight = Variable(kpts_weight_all[:,:,0].contiguous().view(-1))
+            # left_border_weight = Variable(kpts_weight_all[:,:,1].contiguous().view(-1))
+            # right_border_weight = Variable(kpts_weight_all[:,:,2].contiguous().view(-1))
 
             rois_target_left_right = Variable(rois_target_left_right.view(-1, rois_target_left_right.size(2)))
             rois_target_dim_orien = Variable(rois_target_dim_orien.view(-1, rois_target_dim_orien.size(2)))
@@ -259,18 +266,18 @@ class _StereoRCNN(nn.Module):
         cls_prob = F.softmax(cls_score, 1) 
 
         # for keypoint
-        roi_feat_dense = self.PyramidRoI_Feat(mrcnn_feature_maps_left, rois_left, im_info, kpts=True)
-        roi_feat_dense = self.RCNN_kpts(roi_feat_dense) # num x 256 x 28 x 28
-        kpts_pred_all = self.kpts_class(roi_feat_dense) # num x 6 x cfg.KPTS_GRID x cfg.KPTS_GRID
-        kpts_pred_all = kpts_pred_all.sum(2)            # num x 6 x cfg.KPTS_GRID
-        kpts_pred = kpts_pred_all[:,:4,:].contiguous().view(-1, 4*cfg.KPTS_GRID)
-        kpts_prob = F.softmax(kpts_pred,1) # num x (4xcfg.KPTS_GRID) 
+        # roi_feat_dense = self.PyramidRoI_Feat(mrcnn_feature_maps_left, rois_left, im_info, kpts=True)
+        # roi_feat_dense = self.RCNN_kpts(roi_feat_dense) # num x 256 x 28 x 28
+        # kpts_pred_all = self.kpts_class(roi_feat_dense) # num x 6 x cfg.KPTS_GRID x cfg.KPTS_GRID
+        # kpts_pred_all = kpts_pred_all.sum(2)            # num x 6 x cfg.KPTS_GRID
+        # kpts_pred = kpts_pred_all[:,:4,:].contiguous().view(-1, 4*cfg.KPTS_GRID)
+        # kpts_prob = F.softmax(kpts_pred,1) # num x (4xcfg.KPTS_GRID) 
 
-        left_border_pred = kpts_pred_all[:,4,:].contiguous().view(-1, cfg.KPTS_GRID)
-        left_border_prob = F.softmax(left_border_pred,1) # num x cfg.KPTS_GRID
+        # left_border_pred = kpts_pred_all[:,4,:].contiguous().view(-1, cfg.KPTS_GRID)
+        # left_border_prob = F.softmax(left_border_pred,1) # num x cfg.KPTS_GRID
 
-        right_border_pred = kpts_pred_all[:,5,:].contiguous().view(-1, cfg.KPTS_GRID)
-        right_border_prob = F.softmax(right_border_pred,1) # num x cfg.KPTS_GRID
+        # right_border_pred = kpts_pred_all[:,5,:].contiguous().view(-1, cfg.KPTS_GRID)
+        # right_border_prob = F.softmax(right_border_pred,1) # num x cfg.KPTS_GRID
 
         if self.training:
             bbox_pred_view = bbox_pred.view(bbox_pred.size(0), int(bbox_pred.size(1)/6), 6) # (128L, 2L, 6L)
@@ -291,26 +298,26 @@ class _StereoRCNN(nn.Module):
             self.RCNN_loss_bbox = _smooth_l1_loss(bbox_pred, rois_target_left_right, rois_inside_ws, rois_outside_ws)
             self.RCNN_loss_dim_orien = _smooth_l1_loss(dim_orien_pred, rois_target_dim_orien)
             
-            kpts_pred = kpts_pred.view(-1, 4*cfg.KPTS_GRID)
-            kpts_label = kpts_label.view(-1)
-            self.RCNN_loss_kpts = F.cross_entropy(kpts_pred, kpts_label, reduce=False)
-            if torch.sum(kpts_weight).item() < 1:
-                self.RCNN_loss_kpts = torch.sum(self.RCNN_loss_kpts*kpts_weight)
-            else:
-                self.RCNN_loss_kpts = torch.sum(self.RCNN_loss_kpts*kpts_weight)/torch.sum(kpts_weight)
+            # kpts_pred = kpts_pred.view(-1, 4*cfg.KPTS_GRID)
+            # kpts_label = kpts_label.view(-1)
+            # self.RCNN_loss_kpts = F.cross_entropy(kpts_pred, kpts_label, reduce=False)
+            # if torch.sum(kpts_weight).item() < 1:
+            #     self.RCNN_loss_kpts = torch.sum(self.RCNN_loss_kpts*kpts_weight)
+            # else:
+            #     self.RCNN_loss_kpts = torch.sum(self.RCNN_loss_kpts*kpts_weight)/torch.sum(kpts_weight)
 
-            self.RCNN_loss_left_border = F.cross_entropy(left_border_pred, left_border_label, reduce=False)
-            if torch.sum(left_border_weight).item() < 1:
-                self.RCNN_loss_left_border = torch.sum(self.RCNN_loss_left_border*left_border_weight)
-            else:
-                self.RCNN_loss_left_border = torch.sum(self.RCNN_loss_left_border*left_border_weight)/torch.sum(left_border_weight)
+            # self.RCNN_loss_left_border = F.cross_entropy(left_border_pred, left_border_label, reduce=False)
+            # if torch.sum(left_border_weight).item() < 1:
+            #     self.RCNN_loss_left_border = torch.sum(self.RCNN_loss_left_border*left_border_weight)
+            # else:
+            #     self.RCNN_loss_left_border = torch.sum(self.RCNN_loss_left_border*left_border_weight)/torch.sum(left_border_weight)
 
-            self.RCNN_loss_right_border = F.cross_entropy(right_border_pred, right_border_label, reduce=False)
-            if torch.sum(right_border_weight).item()<1:
-                self.RCNN_loss_right_border = torch.sum(self.RCNN_loss_right_border*right_border_weight)
-            else:
-                self.RCNN_loss_right_border = torch.sum(self.RCNN_loss_right_border*right_border_weight)/torch.sum(right_border_weight)
-            self.RCNN_loss_kpts = (self.RCNN_loss_kpts+self.RCNN_loss_left_border+self.RCNN_loss_right_border)/3.0
+            # self.RCNN_loss_right_border = F.cross_entropy(right_border_pred, right_border_label, reduce=False)
+            # if torch.sum(right_border_weight).item()<1:
+            #     self.RCNN_loss_right_border = torch.sum(self.RCNN_loss_right_border*right_border_weight)
+            # else:
+            #     self.RCNN_loss_right_border = torch.sum(self.RCNN_loss_right_border*right_border_weight)/torch.sum(right_border_weight)
+            # self.RCNN_loss_kpts = (self.RCNN_loss_kpts+self.RCNN_loss_left_border+self.RCNN_loss_right_border)/3.0
 
         rois_left = rois_left.view(batch_size,-1, rois_left.size(1))
         rois_right = rois_right.view(batch_size, -1, rois_right.size(1))
@@ -322,9 +329,14 @@ class _StereoRCNN(nn.Module):
             rois_label = rois_label.view(batch_size, -1)
 
         return rois_left, rois_right, cls_prob, bbox_pred, dim_orien_pred, \
-               kpts_prob, left_border_prob, right_border_prob, rpn_loss_cls, rpn_loss_bbox_left_right, \
-               self.RCNN_loss_cls, self.RCNN_loss_bbox, self.RCNN_loss_dim_orien, self.RCNN_loss_kpts, rois_label  
+               rpn_loss_cls, rpn_loss_bbox_left_right, \
+               self.RCNN_loss_cls, self.RCNN_loss_bbox, self.RCNN_loss_dim_orien, rois_label  
+        # return rois_left, rois_right, cls_prob, bbox_pred, dim_orien_pred, \
+        #        kpts_prob, left_border_prob, right_border_prob, rpn_loss_cls, rpn_loss_bbox_left_right, \
+        #        self.RCNN_loss_cls, self.RCNN_loss_bbox, self.RCNN_loss_dim_orien, self.RCNN_loss_kpts, rois_label  
 
+        # debug: rois_left.shape = [B, 512, 5], same for rois_right
+        # debug: cls_prob.shape = [B, 512, 2], bbox_pred.shape = [B, 512, 6], dim_orien_pred.shape = [B, 512, 5]
 
 
 

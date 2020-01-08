@@ -143,7 +143,7 @@ if __name__ == '__main__':
   gt_boxes_right = Variable(torch.FloatTensor(1).cuda())
   gt_boxes_merge = Variable(torch.FloatTensor(1).cuda())
   gt_dim_orien = Variable(torch.FloatTensor(1).cuda())
-  gt_kpts = Variable(torch.FloatTensor(1).cuda())
+  # gt_kpts = Variable(torch.FloatTensor(1).cuda())
 
   # initilize the network here.
   stereoRCNN = resnet(imdb.classes, 101, pretrained=True)
@@ -200,23 +200,28 @@ if __name__ == '__main__':
       gt_boxes_right.data.resize_(data[4].size()).copy_(data[4])
       gt_boxes_merge.data.resize_(data[5].size()).copy_(data[5])
       gt_dim_orien.data.resize_(data[6].size()).copy_(data[6])
-      gt_kpts.data.resize_(data[7].size()).copy_(data[7])
+      # gt_kpts.data.resize_(data[7].size()).copy_(data[7])
       num_boxes.data.resize_(data[8].size()).copy_(data[8]) 
 
       start = time.time() 
       stereoRCNN.zero_grad()
-      rois_left, rois_right, cls_prob, bbox_pred, dim_orien_pred, kpts_prob, \
-      left_border_prob, right_border_prob, rpn_loss_cls, rpn_loss_box_left_right,\
-      RCNN_loss_cls, RCNN_loss_bbox, RCNN_loss_dim_orien, RCNN_loss_kpts, rois_label =\
+      rois_left, rois_right, cls_prob, bbox_pred, dim_orien_pred, \
+      rpn_loss_cls, rpn_loss_box_left_right,\
+      RCNN_loss_cls, RCNN_loss_bbox, RCNN_loss_dim_orien, rois_label =\
       stereoRCNN(im_left_data, im_right_data, im_info, gt_boxes_left, gt_boxes_right, \
-                 gt_boxes_merge, gt_dim_orien, gt_kpts, num_boxes)
+                 gt_boxes_merge, gt_dim_orien, num_boxes)
+      # rois_left, rois_right, cls_prob, bbox_pred, dim_orien_pred, kpts_prob, \
+      # left_border_prob, right_border_prob, rpn_loss_cls, rpn_loss_box_left_right,\
+      # RCNN_loss_cls, RCNN_loss_bbox, RCNN_loss_dim_orien, RCNN_loss_kpts, rois_label =\
+      # stereoRCNN(im_left_data, im_right_data, im_info, gt_boxes_left, gt_boxes_right, \
+      #            gt_boxes_merge, gt_dim_orien, gt_kpts, num_boxes)
 
       loss = rpn_loss_cls.mean() * torch.exp(-uncert[0]) + uncert[0] +\
               rpn_loss_box_left_right.mean() * torch.exp(-uncert[1]) + uncert[1] +\
               RCNN_loss_cls.mean() * torch.exp(-uncert[2]) + uncert[2]+\
               RCNN_loss_bbox.mean() * torch.exp(-uncert[3]) + uncert[3] +\
-              RCNN_loss_dim_orien.mean() * torch.exp(-uncert[4]) + uncert[4] +\
-              RCNN_loss_kpts.mean() * torch.exp(-uncert[5]) + uncert[5]
+              RCNN_loss_dim_orien.mean() * torch.exp(-uncert[4]) + uncert[4] #+\
+              # RCNN_loss_kpts.mean() * torch.exp(-uncert[5]) + uncert[5]
       uncert_data = uncert.data
       log_string('uncert: %.4f, %.4f, %.4f, %.4f, %.4f, %.4f' \
                 %(uncert_data[0], uncert_data[1], uncert_data[2], uncert_data[3], uncert_data[4], uncert_data[5])) 
@@ -233,17 +238,19 @@ if __name__ == '__main__':
       loss_rcnn_cls = RCNN_loss_cls.item()
       loss_rcnn_box = RCNN_loss_bbox.item()
       loss_rcnn_dim_orien = RCNN_loss_dim_orien.item()
-      loss_rcnn_kpts = RCNN_loss_kpts
+      # loss_rcnn_kpts = RCNN_loss_kpts
       fg_cnt = torch.sum(rois_label.data.ne(0))
       bg_cnt = rois_label.data.numel() - fg_cnt
 
       log_string('[epoch %2d][iter %4d/%4d] loss: %.4f, lr: %.2e'\
             %(epoch, step, iters_per_epoch, loss.item(), lr))
       log_string('\t\t\tfg/bg=(%d/%d), time cost: %f' %(fg_cnt, bg_cnt, end-start))
-      log_string('\t\t\trpn_cls: %.4f, rpn_box_left_right: %.4f, rcnn_cls: %.4f, rcnn_box_left_right %.4f,dim_orien %.4f, kpts %.4f' \
-            %(loss_rpn_cls, loss_rpn_box_left_right, loss_rcnn_cls, loss_rcnn_box, loss_rcnn_dim_orien, loss_rcnn_kpts))
+      log_string('\t\t\trpn_cls: %.4f, rpn_box_left_right: %.4f, rcnn_cls: %.4f, rcnn_box_left_right %.4f,dim_orien %.4f' \
+            %(loss_rpn_cls, loss_rpn_box_left_right, loss_rcnn_cls, loss_rcnn_box, loss_rcnn_dim_orien))
+      # log_string('\t\t\trpn_cls: %.4f, rpn_box_left_right: %.4f, rcnn_cls: %.4f, rcnn_box_left_right %.4f,dim_orien %.4f, kpts %.4f' \
+      #       %(loss_rpn_cls, loss_rpn_box_left_right, loss_rcnn_cls, loss_rcnn_box, loss_rcnn_dim_orien, loss_rcnn_kpts))
 
-      del loss, rpn_loss_cls, rpn_loss_box_left_right, RCNN_loss_cls, RCNN_loss_bbox, RCNN_loss_dim_orien, RCNN_loss_kpts
+      del loss, rpn_loss_cls, rpn_loss_box_left_right, RCNN_loss_cls, RCNN_loss_bbox, RCNN_loss_dim_orien#, RCNN_loss_kpts
 
     save_name = os.path.join(output_dir, 'stereo_rcnn_{}_{}.pth'.format(epoch, step))
     save_checkpoint({

@@ -34,7 +34,9 @@ class _ProposalTargetLayer(nn.Module):
         self.BBOX_INSIDE_WEIGHTS = torch.FloatTensor(cfg.TRAIN.BBOX_INSIDE_WEIGHTS)
 
     def forward(self, all_rois_left, all_rois_right, gt_boxes_left, gt_boxes_right, \
-                gt_dim_orien, gt_kpts, num_boxes):
+                gt_dim_orien, num_boxes):
+    # def forward(self, all_rois_left, all_rois_right, gt_boxes_left, gt_boxes_right, \
+    #             gt_dim_orien, gt_kpts, num_boxes):
 
         self.BBOX_NORMALIZE_MEANS = self.BBOX_NORMALIZE_MEANS.type_as(gt_boxes_left)
         self.BBOX_NORMALIZE_STDS = self.BBOX_NORMALIZE_STDS.type_as(gt_boxes_left)
@@ -57,14 +59,20 @@ class _ProposalTargetLayer(nn.Module):
         fg_rois_per_image = int(np.round(cfg.TRAIN.FG_FRACTION * rois_per_image))
 
         labels, rois_left, rois_right, gt_assign_left, bbox_targets_left, bbox_targets_right, \
-            dim_orien_targets, kpts_targets, kpts_weight, bbox_inside_weights = self._sample_rois_pytorch(\
+            dim_orien_targets, bbox_inside_weights = self._sample_rois_pytorch(\
             all_rois_left, all_rois_right, gt_boxes_left, gt_boxes_right, gt_dim_orien, \
-            gt_kpts, fg_rois_per_image, rois_per_image, self._num_classes)
+            fg_rois_per_image, rois_per_image, self._num_classes)
+        # labels, rois_left, rois_right, gt_assign_left, bbox_targets_left, bbox_targets_right, \
+        #     dim_orien_targets, kpts_targets, kpts_weight, bbox_inside_weights = self._sample_rois_pytorch(\
+        #     all_rois_left, all_rois_right, gt_boxes_left, gt_boxes_right, gt_dim_orien, \
+        #     gt_kpts, fg_rois_per_image, rois_per_image, self._num_classes)
 
         bbox_outside_weights = (bbox_inside_weights > 0).float()
 
         return rois_left, rois_right, labels, bbox_targets_left, bbox_targets_right,\
-               dim_orien_targets, kpts_targets, kpts_weight, bbox_inside_weights, bbox_outside_weights
+               dim_orien_targets, bbox_inside_weights, bbox_outside_weights
+        # return rois_left, rois_right, labels, bbox_targets_left, bbox_targets_right,\
+        #        dim_orien_targets, kpts_targets, kpts_weight, bbox_inside_weights, bbox_outside_weights
 
     def backward(self, top, propagate_down, bottom):
         """This layer does not propagate gradients."""
@@ -119,23 +127,23 @@ class _ProposalTargetLayer(nn.Module):
 
         return dim_orien_targets
 
-    def _get_kpts_regression_labels_pytorch(self, kpts_target_data, labels_batch, num_classes, kpts_weight):
+    # def _get_kpts_regression_labels_pytorch(self, kpts_target_data, labels_batch, num_classes, kpts_weight):
 
-        batch_size = labels_batch.size(0)
-        rois_per_image = labels_batch.size(-1)
-        clss = labels_batch
-        kpts_targets = kpts_target_data.new(batch_size, rois_per_image, 3).zero_()
-        weight = kpts_weight.new(batch_size, rois_per_image, 3).zero_()
-        for b in range(batch_size):
-            # assert clss[b].sum() > 0
-            if clss[b].sum() == 0:
-                continue
-            inds = torch.nonzero(clss[b] == 1).view(-1)
-            for i in range(inds.numel()):
-                ind = inds[i]
-                kpts_targets[b, ind] = kpts_target_data[b, ind]
-                weight[b, ind] = kpts_weight[b,ind]
-        return kpts_targets, weight
+    #     batch_size = labels_batch.size(0)
+    #     rois_per_image = labels_batch.size(-1)
+    #     clss = labels_batch
+    #     kpts_targets = kpts_target_data.new(batch_size, rois_per_image, 3).zero_()
+    #     weight = kpts_weight.new(batch_size, rois_per_image, 3).zero_()
+    #     for b in range(batch_size):
+    #         # assert clss[b].sum() > 0
+    #         if clss[b].sum() == 0:
+    #             continue
+    #         inds = torch.nonzero(clss[b] == 1).view(-1)
+    #         for i in range(inds.numel()):
+    #             ind = inds[i]
+    #             kpts_targets[b, ind] = kpts_target_data[b, ind]
+    #             weight[b, ind] = kpts_weight[b,ind]
+    #     return kpts_targets, weight
 
     def _compute_targets_pytorch(self, ex_rois, gt_rois):
 
@@ -165,35 +173,37 @@ class _ProposalTargetLayer(nn.Module):
 
         return target_dim_orien
 
-    def _compute_kpts_targets_pytorch(self, ex_rois, gt_kpts):
+    # def _compute_kpts_targets_pytorch(self, ex_rois, gt_kpts):
 
-        assert ex_rois.size(1) == gt_kpts.size(1)
-        assert ex_rois.size(2) == 4
-        assert gt_kpts.size(2) == 6
+    #     assert ex_rois.size(1) == gt_kpts.size(1)
+    #     assert ex_rois.size(2) == 4
+    #     assert gt_kpts.size(2) == 6
 
-        grid_size = cfg.KPTS_GRID
-        start = ex_rois[:,:,0]  # bs x 128
-        start = start.unsqueeze(2).expand(-1,-1,6) # bs x 128 x 6, k0, k1, k2, k3, left_b, right_b
-        width = ex_rois[:,:,2] - ex_rois[:,:,0] + 1 
-        width = width.unsqueeze(2).expand(-1,-1,6) 
-        target = torch.round((gt_kpts - start)*grid_size/width) 
-        target[target < 0] = -225 
-        target[target > grid_size-1] = -225 
-        kpts_pos, kpts_type = torch.max(target[:,:,:4], 2) # B x num_rois 
-        kpts_pos = kpts_pos.unsqueeze(2) 
-        kpts_type = kpts_type.unsqueeze(2) 
-        target = torch.cat((kpts_type.type(torch.cuda.FloatTensor)*grid_size+kpts_pos,\
-                            target[:,:,4:].type(torch.cuda.FloatTensor)),2) 
-        weight = target.new(target.size()).zero_() 
-        weight[:] = 1 
-        weight[target < 0] = 0 
-        target[target < 0]= 0 
+    #     grid_size = cfg.KPTS_GRID
+    #     start = ex_rois[:,:,0]  # bs x 128
+    #     start = start.unsqueeze(2).expand(-1,-1,6) # bs x 128 x 6, k0, k1, k2, k3, left_b, right_b
+    #     width = ex_rois[:,:,2] - ex_rois[:,:,0] + 1 
+    #     width = width.unsqueeze(2).expand(-1,-1,6) 
+    #     target = torch.round((gt_kpts - start)*grid_size/width) 
+    #     target[target < 0] = -225 
+    #     target[target > grid_size-1] = -225 
+    #     kpts_pos, kpts_type = torch.max(target[:,:,:4], 2) # B x num_rois 
+    #     kpts_pos = kpts_pos.unsqueeze(2) 
+    #     kpts_type = kpts_type.unsqueeze(2) 
+    #     target = torch.cat((kpts_type.type(torch.cuda.FloatTensor)*grid_size+kpts_pos,\
+    #                         target[:,:,4:].type(torch.cuda.FloatTensor)),2) 
+    #     weight = target.new(target.size()).zero_() 
+    #     weight[:] = 1 
+    #     weight[target < 0] = 0 
+    #     target[target < 0]= 0 
         
-        return target.type(torch.cuda.LongTensor), weight # bs x 128 x 3
+    #     return target.type(torch.cuda.LongTensor), weight # bs x 128 x 3
 
 
     def _sample_rois_pytorch(self, all_rois_left, all_rois_right, gt_boxes_left, gt_boxes_right, \
-                            gt_dim_orien, gt_kpts, fg_rois_per_image, rois_per_image, num_classes):
+                            gt_dim_orien, fg_rois_per_image, rois_per_image, num_classes):
+    # def _sample_rois_pytorch(self, all_rois_left, all_rois_right, gt_boxes_left, gt_boxes_right, \
+    #                         gt_dim_orien, gt_kpts, fg_rois_per_image, rois_per_image, num_classes):
         """Generate a random sample of RoIs comprising foreground and background
         examples.
         """
@@ -223,7 +233,7 @@ class _ProposalTargetLayer(nn.Module):
         gt_rois_batch_right = all_rois_right.new(batch_size, rois_per_image, 5).zero_()
 
         gt_dim_orien_batch = all_rois_right.new(batch_size, rois_per_image, 5).zero_()
-        gt_kpts_batch = all_rois_right.new(batch_size, rois_per_image, 6).zero_()
+        # gt_kpts_batch = all_rois_right.new(batch_size, rois_per_image, 6).zero_()
         # Guard against the case when an image has fewer than max_fg_rois_per_image
         # foreground RoIs
         for i in range(batch_size):
@@ -305,7 +315,7 @@ class _ProposalTargetLayer(nn.Module):
             gt_rois_batch_right[i] = gt_boxes_right[i][gt_assignment_right[i][keep_inds]]
 
             gt_dim_orien_batch[i] = gt_dim_orien[i][gt_assignment_left[i][keep_inds]]
-            gt_kpts_batch[i] = gt_kpts[i][gt_assignment_left[i][keep_inds]]
+            # gt_kpts_batch[i] = gt_kpts[i][gt_assignment_left[i][keep_inds]]
 
         bbox_target_data_left = self._compute_targets_pytorch(
                 rois_batch_left[:,:,1:5], gt_rois_batch_left[:,:,:4])
@@ -315,7 +325,7 @@ class _ProposalTargetLayer(nn.Module):
 
         dim_orien_target_data = self._compute_dim_orien_targets_pytorch(gt_dim_orien_batch)
 
-        kpts_target_data, kpts_weight = self._compute_kpts_targets_pytorch(rois_batch_left[:,:,1:5], gt_kpts_batch)
+        # kpts_target_data, kpts_weight = self._compute_kpts_targets_pytorch(rois_batch_left[:,:,1:5], gt_kpts_batch)
         
         bbox_targets_left, bbox_inside_weights_left = \
                 self._get_bbox_regression_labels_pytorch(bbox_target_data_left, labels_batch, num_classes)
@@ -325,10 +335,12 @@ class _ProposalTargetLayer(nn.Module):
 
         dim_orien_target = self._get_dim_orien_regression_labels_pytorch(dim_orien_target_data, labels_batch, num_classes)
 
-        kpts_targets, kpts_weight = self._get_kpts_regression_labels_pytorch(kpts_target_data, labels_batch, num_classes, kpts_weight)
+        # kpts_targets, kpts_weight = self._get_kpts_regression_labels_pytorch(kpts_target_data, labels_batch, num_classes, kpts_weight)
         
         return labels_batch, rois_batch_left, rois_batch_right, gt_assign_batch_left, \
-               bbox_targets_left, bbox_targets_right, dim_orien_target, kpts_targets, kpts_weight, bbox_inside_weights_left
+               bbox_targets_left, bbox_targets_right, dim_orien_target, bbox_inside_weights_left
+        # return labels_batch, rois_batch_left, rois_batch_right, gt_assign_batch_left, \
+        #        bbox_targets_left, bbox_targets_right, dim_orien_target, kpts_targets, kpts_weight, bbox_inside_weights_left
 
 
 
