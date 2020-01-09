@@ -217,12 +217,18 @@ if __name__ == '__main__':
       # stereoRCNN(im_left_data, im_right_data, im_info, gt_boxes_left, gt_boxes_right, \
       #            gt_boxes_merge, gt_dim_orien, gt_kpts, num_boxes)
 
-      loss = rpn_loss_cls.mean() * torch.exp(-uncert[0]) + uncert[0] +\
-              rpn_loss_box_left_right.mean() * torch.exp(-uncert[1]) + uncert[1] +\
-              RCNN_loss_cls.mean() * torch.exp(-uncert[2]) + uncert[2]+\
-              RCNN_loss_bbox.mean() * torch.exp(-uncert[3]) + uncert[3] +\
-              RCNN_loss_dim_orien.mean() * torch.exp(-uncert[4]) + uncert[4] #+\
+      loss = rpn_loss_cls.mean() +\
+              rpn_loss_box_left_right.mean() +\
+              RCNN_loss_cls.mean() +\
+              RCNN_loss_bbox.mean() +\
+              RCNN_loss_dim_orien.mean() 
               # RCNN_loss_kpts.mean() * torch.exp(-uncert[5]) + uncert[5]
+      # loss = rpn_loss_cls.mean() * torch.exp(-uncert[0]) + uncert[0] +\
+      #         rpn_loss_box_left_right.mean() * torch.exp(-uncert[1]) + uncert[1] +\
+      #         RCNN_loss_cls.mean() * torch.exp(-uncert[2]) + uncert[2]+\
+      #         RCNN_loss_bbox.mean() * torch.exp(-uncert[3]) + uncert[3] +\
+      #         RCNN_loss_dim_orien.mean() * torch.exp(-uncert[4]) + uncert[4] #+\
+      #         # RCNN_loss_kpts.mean() * torch.exp(-uncert[5]) + uncert[5]
       uncert_data = uncert.data
       log_string('uncert: %.4f, %.4f, %.4f, %.4f, %.4f, %.4f' \
                 %(uncert_data[0], uncert_data[1], uncert_data[2], uncert_data[3], uncert_data[4], uncert_data[5])) 
