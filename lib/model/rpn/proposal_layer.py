@@ -58,6 +58,7 @@ class _ProposalLayer(nn.Module):
         # the first set of _num_anchors channels are bg probs
         # the second set are the fg probs
         scores = input[0][:, :, 1]  # batch_size x num_rois x 1
+        # TODO: modify this part to accept any number of bbox deltas
         bbox_deltas_left_right = input[1]      # batch_size x num_rois x 4
         bbox_deltas_left = bbox_deltas_left_right[:,:,:4].clone()
         bbox_deltas_right = bbox_deltas_left_right[:,:,:4].clone()

@@ -256,9 +256,12 @@ class _StereoRCNN(nn.Module):
         #roi_feat_right = self.PyramidRoI_Feat(mrcnn_feature_maps_right, rois_right, im_info)
         roi_feat_semantic = torch.cat((self.PyramidRoI_Feat(mrcnn_feature_maps_left, rois_left, im_info),\
                                        self.PyramidRoI_Feat(mrcnn_feature_maps_right, rois_right, im_info)),1)
+                                       # debug: left PyramidRoI_Feat.shape [512, 256, 7, 7]
+                                       # debug: right PyramidRoI_Feat.shape [512, 256, 7, 7]
 
         # feed pooled features to top model
         roi_feat_semantic = self._head_to_tail(roi_feat_semantic)
+        # debug: roi_feat_semantic.shape [512, 2048]
         bbox_pred = self.RCNN_bbox_pred(roi_feat_semantic)            # num x 6
         dim_orien_pred = self.RCNN_dim_orien_pred(roi_feat_semantic)  # num x 5
 

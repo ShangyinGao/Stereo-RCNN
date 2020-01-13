@@ -209,8 +209,9 @@ if __name__ == '__main__':
       rois_left, rois_right, cls_prob, bbox_pred, dim_orien_pred, \
       rpn_loss_cls, rpn_loss_box_left_right,\
       RCNN_loss_cls, RCNN_loss_bbox, RCNN_loss_dim_orien, rois_label =\
-      stereoRCNN(im_left_data, im_right_data, im_info, gt_boxes_left, gt_boxes_right, \
+      steroRCNN(im_left_data, im_right_data, im_info, gt_boxes_left, gt_boxes_right, \
                  gt_boxes_merge, gt_dim_orien, num_boxes)
+      print(f'!!!model forward time: {time.time()-start}')
       # rois_left, rois_right, cls_prob, bbox_pred, dim_orien_pred, kpts_prob, \
       # left_border_prob, right_border_prob, rpn_loss_cls, rpn_loss_box_left_right,\
       # RCNN_loss_cls, RCNN_loss_bbox, RCNN_loss_dim_orien, RCNN_loss_kpts, rois_label =\
