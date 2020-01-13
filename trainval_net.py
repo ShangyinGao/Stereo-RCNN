@@ -32,6 +32,8 @@ from model.utils.net_utils import weights_normal_init, save_net, load_net, \
 
 from model.stereo_rcnn.resnet import resnet
 
+from tensorboardX import SummaryWriter
+
 def parse_args():
   '''
   Parse input arguments
@@ -166,8 +168,8 @@ if __name__ == '__main__':
         params += [{'params':[value],'lr':lr, 'weight_decay': cfg.TRAIN.WEIGHT_DECAY}]
   params += [{'params':[uncert], 'lr':lr}]
 
-  # optimizer = torch.optim.SGD(params, momentum=cfg.TRAIN.MOMENTUM)
-  optimizer = torch.optim.Adam(params)
+  optimizer = torch.optim.SGD(params, momentum=cfg.TRAIN.MOMENTUM)
+  # optimizer = torch.optim.Adam(params)
 
   if args.resume:
     load_name = os.path.join(output_dir,
@@ -275,6 +277,8 @@ if __name__ == '__main__':
     log_string('save model: {}'.format(save_name)) 
     end = time.time()
     log_string('time %.4f' %(end - start))
+
+  writer.close()
 
 
 
