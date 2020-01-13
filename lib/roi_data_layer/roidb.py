@@ -126,6 +126,9 @@ def combined_roidb(imdb_names, training=True):
   if training:
     roidb = filter_roidb(roidb)
 
+  first_x = 128
+  roidb = roidb[:first_x]
+
   ratio_list, ratio_index = rank_roidb_ratio(roidb)
 
   return imdb, roidb, ratio_list, ratio_index

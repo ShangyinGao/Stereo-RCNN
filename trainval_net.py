@@ -32,6 +32,8 @@ from model.utils.net_utils import weights_normal_init, save_net, load_net, \
 
 from model.stereo_rcnn.resnet import resnet
 
+from tensorboardX import SummaryWriter
+
 def parse_args():
   '''
   Parse input arguments
@@ -58,10 +60,12 @@ def parse_args():
   # config optimization
   parser.add_argument('--lr_decay_step', dest='lr_decay_step',
                       help='step to do learning rate decay, unit is epoch',
-                      default=10, type=int)
+                      default=5, type=int)
   parser.add_argument('--lr_decay_gamma', dest='lr_decay_gamma',
                       help='learning rate decay ratio',
                       default=0.1, type=float)
+
+from tensorboardX import SummaryWriter               
 
   # resume trained model
   parser.add_argument('--r', dest='resume',
@@ -120,6 +124,7 @@ if __name__ == '__main__':
     print('save dir', output_dir)
     os.makedirs(output_dir)
   log_info = open((output_dir + 'trainlog.txt'), 'w')
+  writer = SummaryWriter(logdir=os.path.join(output_dir, 'tensorboard'))
 
   def log_string(out_str):  
     log_info.write(out_str+'\n')
@@ -217,6 +222,12 @@ if __name__ == '__main__':
               RCNN_loss_bbox.mean() * torch.exp(-uncert[3]) + uncert[3] +\
               RCNN_loss_dim_orien.mean() * torch.exp(-uncert[4]) + uncert[4] +\
               RCNN_loss_kpts.mean() * torch.exp(-uncert[5]) + uncert[5]
+      loss_plot = rpn_loss_cls.mean() +\
+              rpn_loss_box_left_right.mean() +\
+              RCNN_loss_cls.mean() +\
+              RCNN_loss_bbox.mean() +\
+              RCNN_loss_dim_orien.mean() +\
+              RCNN_loss_kpts.mean()
       uncert_data = uncert.data
       log_string('uncert: %.4f, %.4f, %.4f, %.4f, %.4f, %.4f' \
                 %(uncert_data[0], uncert_data[1], uncert_data[2], uncert_data[3], uncert_data[4], uncert_data[5])) 
@@ -239,6 +250,7 @@ if __name__ == '__main__':
 
       log_string('[epoch %2d][iter %4d/%4d] loss: %.4f, lr: %.2e'\
             %(epoch, step, iters_per_epoch, loss.item(), lr))
+      writer.add_scalar('total_loss', loss_plot.item(), epoch * iters_per_epoch + step)
       log_string('\t\t\tfg/bg=(%d/%d), time cost: %f' %(fg_cnt, bg_cnt, end-start))
       log_string('\t\t\trpn_cls: %.4f, rpn_box_left_right: %.4f, rcnn_cls: %.4f, rcnn_box_left_right %.4f,dim_orien %.4f, kpts %.4f' \
             %(loss_rpn_cls, loss_rpn_box_left_right, loss_rcnn_cls, loss_rcnn_box, loss_rcnn_dim_orien, loss_rcnn_kpts))
