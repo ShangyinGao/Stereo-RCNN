@@ -120,6 +120,7 @@ if __name__ == '__main__':
     print('save dir', output_dir)
     os.makedirs(output_dir)
   log_info = open((output_dir + 'trainlog.txt'), 'w')
+  writer = SummaryWriter(log_dir=os.path.join(output_dir, 'tensorboard'))
 
   def log_string(out_str):  
     log_info.write(out_str+'\n')
@@ -182,6 +183,7 @@ if __name__ == '__main__':
   stereoRCNN.cuda()
 
   iters_per_epoch = int(train_size / args.batch_size)
+  total_step = 0
   for epoch in range(args.start_epoch, args.max_epochs + 1):
     
     stereoRCNN.train()
@@ -209,7 +211,7 @@ if __name__ == '__main__':
       rois_left, rois_right, cls_prob, bbox_pred, dim_orien_pred, \
       rpn_loss_cls, rpn_loss_box_left_right,\
       RCNN_loss_cls, RCNN_loss_bbox, RCNN_loss_dim_orien, rois_label =\
-      steroRCNN(im_left_data, im_right_data, im_info, gt_boxes_left, gt_boxes_right, \
+      stereoRCNN(im_left_data, im_right_data, im_info, gt_boxes_left, gt_boxes_right, \
                  gt_boxes_merge, gt_dim_orien, num_boxes)
       print(f'!!!model forward time: {time.time()-start}')
       # rois_left, rois_right, cls_prob, bbox_pred, dim_orien_pred, kpts_prob, \
@@ -252,12 +254,14 @@ if __name__ == '__main__':
 
       log_string('[epoch %2d][iter %4d/%4d] loss: %.4f, lr: %.2e'\
             %(epoch, step, iters_per_epoch, loss.item(), lr))
+      writer.add_scalar('total_loss', loss.item(), total_step)
       log_string('\t\t\tfg/bg=(%d/%d), time cost: %f' %(fg_cnt, bg_cnt, end-start))
       log_string('\t\t\trpn_cls: %.4f, rpn_box_left_right: %.4f, rcnn_cls: %.4f, rcnn_box_left_right %.4f,dim_orien %.4f' \
             %(loss_rpn_cls, loss_rpn_box_left_right, loss_rcnn_cls, loss_rcnn_box, loss_rcnn_dim_orien))
       # log_string('\t\t\trpn_cls: %.4f, rpn_box_left_right: %.4f, rcnn_cls: %.4f, rcnn_box_left_right %.4f,dim_orien %.4f, kpts %.4f' \
       #       %(loss_rpn_cls, loss_rpn_box_left_right, loss_rcnn_cls, loss_rcnn_box, loss_rcnn_dim_orien, loss_rcnn_kpts))
 
+      total_step += 1
       del loss, rpn_loss_cls, rpn_loss_box_left_right, RCNN_loss_cls, RCNN_loss_bbox, RCNN_loss_dim_orien#, RCNN_loss_kpts
 
     save_name = os.path.join(output_dir, 'stereo_rcnn_{}_{}.pth'.format(epoch, step))
