@@ -54,7 +54,7 @@ def parse_args():
                       default=12, type=int)
   parser.add_argument('--checkpoint', dest='checkpoint',
                       help='checkpoint to load network',
-                      default=6477, type=int)
+                      default=15, type=int)
 
   args = parser.parse_args()
   return args
@@ -329,13 +329,9 @@ if __name__ == '__main__':
                       .format(detect_time, solve_time))
 
     im2show = np.concatenate((im2show_left, im2show_right), axis=0)
+    cv2.imwrite('demo/result_1.png', im2show)
     im2show = np.concatenate((im2show, im_box), axis=1)
-    cv2.imshow('result', im2show)
-
-    k = cv2.waitKey(-1)
-    if k == 27:    # Esc key to stop
-        print('exit!')
-        sys.exit()
+    cv2.imwrite('demo/result_2.png', im2show)
 
 
 
